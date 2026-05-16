@@ -63,7 +63,7 @@ jobs:
         cmake -DCMAKE_BUILD_TYPE=Release -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" ..
         make -j$(nproc)
 
-    - name: Run Tests
+    
       run: cd build && ./amplitron-tests
 
     - name: Save coverage report
@@ -103,7 +103,7 @@ jobs:
     - name: Setup External Dependencies
       run: |
         mkdir -p external external/kiss_fft
-        git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
+        git clone --depth 1 --br- name: Run Testsanch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
         curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
         curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
         curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
@@ -134,7 +134,7 @@ jobs:
           ..
 
     - name: Run Tests
-      run: cd build && ./amplitron-tests
+  run: ./build/amplitron-tests
 
     - name: Save coverage report
       uses: actions/upload-artifact@v4
