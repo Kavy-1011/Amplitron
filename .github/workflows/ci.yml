@@ -64,6 +64,22 @@ jobs:
 
     - name: Run Tests
       run: cd build && ./amplitron-tests
+      
+       - name: Save coverage report
+  uses: actions/upload-artifact@v4
+  with:
+    name: coverage-report
+    path: build/filtered.info
+
+
+
+            - name: Generate Coverage
+        run: |
+          cd build
+          lcov --capture --ignore-errors mismatch --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' '*/external/*' '*/tests/*' --output-file filtered.info
+          lcov --summary filtered.info
+          lcov --fail-under-lines 60
 
     - name: Upload Build
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -120,6 +136,12 @@ jobs:
 
     - name: Run Tests
       run: cd build && ./amplitron-tests
+
+      - name: Save coverage report
+  uses: actions/upload-artifact@v4
+  with:
+    name: coverage-report
+    path: build/filtered.info
 
     - name: Bundle Dylibs
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'

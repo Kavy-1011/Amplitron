@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(Amplitron VERSION 1.0.0 LANGUAGES CXX C)
+enable_testing()
 include(GNUInstallDirs)
 
 set(AMPLITRON_VERSION "0.0.0" CACHE STRING "Application version (set by CI)")
@@ -489,7 +490,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     )
 
     add_executable(amplitron-tests ${TEST_SOURCES} ${CORE_SOURCES} ${KISS_FFT_SOURCES})
-
+    add_test(NAME amplitron-tests COMMAND amplitron-tests)
     target_include_directories(amplitron-tests PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/external
@@ -502,7 +503,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
     )
-
+    target_compile_options(amplitron-tests PRIVATE --coverage)
+target_link_options(amplitron-tests PRIVATE --coverage)
     target_link_libraries(amplitron-tests PRIVATE
         ${PORTAUDIO_LIBRARIES}
         ${SDL2_LIBRARIES}
@@ -542,3 +544,12 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     install(DIRECTORY assets/fonts DESTINATION bin/assets)
 
 endif() # EMSCRIPTEN / ANDROID / IOS / desktop
+
+option(ENABLE_COVERAGE "Enable coverage" ON)
+
+if(ENABLE_COVERAGE)
+    message(STATUS "Coverage Enabled")
+
+    add_compile_options(--coverage -O0 -g)
+    add_link_options(--coverage)
+endif()
