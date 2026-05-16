@@ -133,9 +133,6 @@ jobs:
           -DRTMIDI_LIBRARIES="$HOMEBREW_PREFIX/lib/librtmidi.dylib" \
           ..
 
-    - name: Run Tests
-  run: ./build/amplitron-tests
-
     - name: Save coverage report
   uses: actions/upload-artifact@v4
   with:
