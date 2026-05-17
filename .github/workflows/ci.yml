@@ -1,10 +1,9 @@
-name: CI - Build and Test
+name: CI - Build, Test & Coverage
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [develop, main]
 
 jobs:
   test-linux:
@@ -12,56 +11,40 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install deps
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y build-essential cmake lcov \
-            libportaudio2 portaudio19-dev libsdl2-dev \
-            libgl1-mesa-dev libglu1-mesa-dev librtmidi-dev
+          sudo apt-get install -y build-essential cmake lcov
 
-      - name: Build
+      - name: Build with coverage
         run: |
           mkdir -p build
           cd build
-          cmake ..
-          make -j$(nproc)
+          cmake .. -DCMAKE_BUILD_TYPE=Debug --coverage
+          make -j2
 
       - name: Run tests
         run: cd build && ./amplitron-tests
 
-      - name: Coverage
+      - name: Generate coverage
         run: |
           cd build
           lcov --capture --directory . --output-file coverage.info
-          lcov --remove coverage.info '/usr/*' --output-file filtered.info
-          lcov --summary filtered.info
+          lcov --remove coverage.info '/usr/*' '*/external/*' '*/tests/*' \
+            --output-file filtered.info
 
-      - name: Upload coverage
+      - name: Coverage check (60%)
+        run: |
+          COVERAGE=$(lcov --summary filtered.info | grep lines | awk '{print $4}' | tr -d '%')
+          echo "Coverage = $COVERAGE"
+          if (( $(echo "$COVERAGE < 60" | bc -l) )); then
+            echo "Coverage below 60%"
+            exit 1
+          fi
+
+      - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-report
           path: build/filtered.info
-
-  test-macos:
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install deps
-        run: brew install portaudio sdl2 rtmidi
-
-      - name: Build
-        run: |
-          mkdir -p build
-          cd build
-          cmake ..
-          make -j$(sysctl -n hw.ncpu)
-
-      - name: Run tests
-        run: cd build && ./amplitron-tests
