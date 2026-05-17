@@ -545,7 +545,7 @@ target_link_options(amplitron-tests PRIVATE --coverage)
 
 endif() # EMSCRIPTEN / ANDROID / IOS / desktop
 
-option(ENABLE_COVERAGE "Enable coverage" ON)
+option(ENABLE_COVERAGE "Enable coverage" OFF)
 
 if(ENABLE_COVERAGE)
     message(STATUS "Coverage Enabled")
