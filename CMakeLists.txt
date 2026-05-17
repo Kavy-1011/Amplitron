@@ -553,3 +553,10 @@ if(ENABLE_COVERAGE)
     add_compile_options(--coverage -O0 -g)
     add_link_options(--coverage)
 endif()
+
+option(ENABLE_COVERAGE "Enable coverage" ON)
+
+if(ENABLE_COVERAGE)
+    add_compile_options(--coverage -O0 -g)
+    add_link_options(--coverage)
+endif()

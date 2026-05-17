@@ -1,0 +1,36 @@
+name: Coverage
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y lcov g++
+
+      - name: Build
+        run: |
+          cmake -S . -B build -DENABLE_COVERAGE=ON
+          cmake --build build
+
+      - name: Run tests
+        run: cd build && ctest
+
+      - name: Coverage report
+        run: |
+          cd build
+          lcov --capture --directory . --output-file cov.info
+          lcov --remove cov.info '/usr/*' '*/tests/*' --output-file cov.info
+          genhtml cov.info --output-directory report
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/report
