@@ -13,11 +13,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ✅ IMPORTANT: install lcov (fix your error)
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lcov gcovr cmake g++
+run: |
+    sudo apt-get update
+    sudo apt-get install -y \
+      lcov gcovr cmake g++ \
+      libgl1-mesa-dev \
+      libglu1-mesa-dev \
+      freeglut3-dev \
+      portaudio19-dev \
+      libsdl2-dev \
+      librtmidi-dev
 
       - name: Configure project
         run: cmake -S . -B build -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
