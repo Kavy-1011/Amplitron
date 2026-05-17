@@ -554,9 +554,11 @@ if(ENABLE_COVERAGE)
     add_link_options(--coverage)
 endif()
 
-option(ENABLE_COVERAGE "Enable coverage" ON)
+option(ENABLE_COVERAGE "Enable coverage reporting" OFF)
 
 if(ENABLE_COVERAGE)
+    message(STATUS "Coverage enabled")
+
     add_compile_options(--coverage -O0 -g)
     add_link_options(--coverage)
 endif()
