@@ -139,7 +139,7 @@ jobs:
     name: coverage-report
     path: build/filtered.info
 
-    - name: Bundle Dylibs
+   - name: Bundle Dylibs
   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
   run: |
     echo "macOS build step kept same (unchanged)"
