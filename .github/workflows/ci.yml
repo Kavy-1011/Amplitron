@@ -1,8 +1,41 @@
-- name: Build with coverage
-  run: |
-    mkdir -p build
-    cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_CXX_FLAGS="--coverage" \
-      -DCMAKE_C_FLAGS="--coverage"
-    make -j2
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential cmake lcov
+
+      - name: Build with coverage
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_C_FLAGS="--coverage"
+          make -j2
+
+      - name: Run tests
+        run: cd build && ./amplitron-tests
+
+      - name: Generate coverage
+        run: |
+          cd build
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' '*/external/*' '*/tests/*' --output-file filtered.info
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/filtered.info
