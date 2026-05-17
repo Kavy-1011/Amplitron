@@ -1,3 +1,6 @@
+## Coverage
+
+[![Coverage](https://codecov.io/gh/Kavy-1011/Amplitron/branch/main/graph/badge.svg)](https://codecov.io)
 # Amplitron - Guitar Amp Simulator
 
 [![CI Build](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml/badge.svg)](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml)

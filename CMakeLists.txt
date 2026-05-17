@@ -562,3 +562,5 @@ if(ENABLE_COVERAGE)
     add_compile_options(--coverage -O0 -g)
     add_link_options(--coverage)
 endif()
+
+option(BUILD_AUDIO_TOOLS "Build audio/tools modules" OFF)

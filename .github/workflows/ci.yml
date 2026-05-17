@@ -1,4 +1,4 @@
-name: CI
+name: CI - Build, Test & Coverage
 
 on:
   push:
@@ -8,8 +8,6 @@ on:
 jobs:
   test-linux:
     runs-on: ubuntu-latest
-    env:
-      COVERAGE_THRESHOLD: 60
 
     steps:
       - name: Checkout code
@@ -18,40 +16,58 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y build-essential cmake lcov
+          sudo apt-get install -y build-essential cmake lcov bc
 
-      - name: Configure (coverage)
+      - name: Build with coverage
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
-
-      - name: Build
-        run: |
-          cd build
-          cmake --build . -- -j2
+          cmake .. -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="--coverage" \
+            -DCMAKE_C_FLAGS="--coverage"
+          make -j2
 
       - name: Run tests
+        run: cd build && ./amplitron-tests
+
+      - name: Generate coverage
         run: |
           cd build
-          ctest --output-on-failure
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' '*/external/*' '*/tests/*' \
+            --output-file filtered.info
 
-      - name: Generate coverage and enforce threshold
+      - name: Check coverage threshold
         run: |
-          bash scripts/generate_coverage.sh build
+          COVERAGE=$(lcov --summary filtered.info | grep lines | awk '{print $4}' | tr -d '%')
+          echo "Coverage = $COVERAGE"
+          if (( $(echo "$COVERAGE < 60" | bc -l) )); then
+            echo "Coverage below 60%"
+            exit 1
+          fi
 
-      - name: Upload coverage info and HTML
+      - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: |
-            build/filtered.info
-            build/coverage_html
-            build/coverage_summary.txt
+          path: build/filtered.info
 
+      - name: PR Coverage Comment
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage
+          message: |
+             Coverage Report Generated
+
+            ✔ Build & tests completed
+            ✔ Coverage file created
+
+            👉 Full details Codecov par check karo
+
+      
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
         with:
           files: build/filtered.info
-          flags: unittests
           fail_ci_if_error: false
