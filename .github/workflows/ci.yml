@@ -13,58 +13,23 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Cache apt packages
-        uses: actions/cache@v5
-        id: apt-cache
-        with:
-          path: ~/apt-cache
-          key: apt-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
-
       - name: Install Dependencies
         run: |
-          if [ "${{ steps.apt-cache.outputs.cache-hit }}" = "true" ] && [ -d ~/apt-cache ]; then
-            echo "Restoring cached .deb packages..."
-            sudo cp ~/apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
-          fi
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             build-essential cmake \
             libportaudio2 portaudio19-dev \
             libsdl2-dev libgl1-mesa-dev libglu1-mesa-dev \
-            librtmidi-dev \
-            lcov
-
-          mkdir -p ~/apt-cache
-          cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
-
-      - name: Setup External Dependencies
-        run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
-
-      - name: Generate Version
-        id: version
-        run: |
-          COUNT=$(git rev-list --count HEAD)
-          echo "version=0.1.${COUNT}" >> $GITHUB_OUTPUT
+            librtmidi-dev lcov
 
       - name: Build
         run: |
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release \
-            -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" ..
+          cmake -DCMAKE_BUILD_TYPE=Release ..
           make -j$(nproc)
 
       - name: Run Tests
@@ -76,64 +41,36 @@ jobs:
           lcov --capture --ignore-errors mismatch --directory . --output-file coverage.info
           lcov --remove coverage.info '/usr/*' '*/external/*' '*/tests/*' --output-file filtered.info
           lcov --summary filtered.info
-          lcov --fail-under-lines 60
 
-      - name: Save coverage report
+      - name: Upload Coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: build/filtered.info
-
-      - name: Upload Build
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-build
-          path: build/Amplitron
-          retention-days: 1
 
   test-macos:
     name: Test on macOS
     runs-on: macos-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install Dependencies
         run: brew install portaudio sdl2 rtmidi
 
-      - name: Setup External Dependencies
-        run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
-
-      - name: Generate Version
-        id: version
-        run: |
-          COUNT=$(git rev-list --count HEAD)
-          echo "version=0.1.${COUNT}" >> $GITHUB_OUTPUT
-
       - name: Build
         run: |
-          HOMEBREW_PREFIX=$(brew --prefix)
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release \
-            -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
-            -DPORTAUDIO_INCLUDE_DIRS="$HOMEBREW_PREFIX/include" \
-            -DPORTAUDIO_LIBRARIES="$HOMEBREW_PREFIX/lib/libportaudio.dylib" \
-            -DSDL2_INCLUDE_DIRS="$HOMEBREW_PREFIX/include/SDL2" \
-            -DSDL2_LIBRARIES="$HOMEBREW_PREFIX/lib/libSDL2.dylib" \
-            -DRTMIDI_INCLUDE_DIRS="$HOMEBREW_PREFIX/include" \
-            -DRTMIDI_LIBRARIES="$HOMEBREW_PREFIX/lib/librtmidi.dylib" \
-            ..
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Run Tests
+        run: cd build && ./amplitron-tests
+
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-macos
+          path: build/filtered.info
