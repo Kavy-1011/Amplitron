@@ -8,48 +8,44 @@ on:
 
 jobs:
   test-linux:
-    name: Test on Linux
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install Dependencies
+      - name: Install deps
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            build-essential cmake \
-            libportaudio2 portaudio19-dev \
-            libsdl2-dev libgl1-mesa-dev libglu1-mesa-dev \
-            librtmidi-dev lcov
+          sudo apt-get install -y build-essential cmake lcov \
+            libportaudio2 portaudio19-dev libsdl2-dev \
+            libgl1-mesa-dev libglu1-mesa-dev librtmidi-dev
 
       - name: Build
         run: |
-          mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
+          mkdir -p build
+          cd build
+          cmake ..
           make -j$(nproc)
 
-      - name: Run Tests
+      - name: Run tests
         run: cd build && ./amplitron-tests
 
-      - name: Generate Coverage
+      - name: Coverage
         run: |
           cd build
-          lcov --capture --ignore-errors mismatch --directory . --output-file coverage.info
-          lcov --remove coverage.info '/usr/*' '*/external/*' '*/tests/*' --output-file filtered.info
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' --output-file filtered.info
           lcov --summary filtered.info
 
-      - name: Upload Coverage
+      - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
+          name: coverage
           path: build/filtered.info
 
   test-macos:
-    name: Test on macOS
     runs-on: macos-latest
 
     steps:
@@ -57,20 +53,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Dependencies
+      - name: Install deps
         run: brew install portaudio sdl2 rtmidi
 
       - name: Build
         run: |
-          mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
+          mkdir -p build
+          cd build
+          cmake ..
           make -j$(sysctl -n hw.ncpu)
 
-      - name: Run Tests
+      - name: Run tests
         run: cd build && ./amplitron-tests
-
-      - name: Upload Coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report-macos
-          path: build/filtered.info
