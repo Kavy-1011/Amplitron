@@ -14,16 +14,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install dependencies
-run: |
+  run: |
     sudo apt-get update
     sudo apt-get install -y \
       lcov gcovr cmake g++ \
       libgl1-mesa-dev \
-      libglu1-mesa-dev \
+      mesa-common-dev \
       freeglut3-dev \
-      portaudio19-dev \
+      libglu1-mesa-dev \
       libsdl2-dev \
-      librtmidi-dev
+      portaudio19-dev \
+      librtmidi-dev \
+      pkg-config
+
 
       - name: Configure project
         run: cmake -S . -B build -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
